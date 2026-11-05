@@ -56,7 +56,16 @@ Countdown tests use a controlled clock. GitHub Actions runs syntax checks and te
 
 Run `npm run build` to generate [dist/index.html](dist/index.html) and its eight supporting files. The build uses an explicit public-file list in [build.js](build.js), excluding tests, documentation, and development files.
 
-Edit the source files, not `dist/`: each build replaces that generated folder. Keep `dist/` ignored by Git and commit the source and build script instead. Deploying this folder to GitHub Pages requires a GitHub Actions deployment workflow; the existing checks do not publish it.
+Edit the source files, not `dist/`: each build replaces that generated folder. Keep `dist/` ignored by Git and commit the source and build script instead.
+
+To publish:
+
+1. Push the source project, including `.github/workflows`, to the `main` branch on GitHub. Do not upload secrets or generated `dist/` files.
+2. In the repository's **Settings > Pages**, set **Source** to **GitHub Actions**, not **Deploy from a branch**.
+3. In **Actions**, run **Deploy GitHub Pages** on `main`, or push another change to `main`. The workflow checks the code, builds the app, and publishes only `dist/`.
+4. Open the URL shown by the successful deployment and enable **Enforce HTTPS** in Pages settings when available.
+
+The [deployment workflow](.github/workflows/pages.yml) is configured locally; it does not create a repository or publish anything until it is pushed and run on GitHub. If your default branch is not `main`, update the workflow's branch filter and deployment condition.
 
 ## Accessibility and Release Notes
 

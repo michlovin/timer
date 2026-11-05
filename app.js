@@ -69,6 +69,10 @@
   let pipWindow = null;
   const completionSound = new Audio("./sound.mp3");
   completionSound.preload = "auto";
+  let audioContext = null;
+  let completionBuffer = null;
+  let soundLoading = null;
+  let completionPending = false;
   const homeBody = document.body;
   const labels = {
     focus: "TIME TO FOCUS",
@@ -183,14 +187,78 @@
       `<i data-lucide="${running ? "pause" : "play"}"></i>`;
     icons();
   }
-  function playCompletionSound() {
+  function prepareCompletionSound() {
     if (!preferences.sound) {
       return;
     }
-    completionSound.currentTime = 0;
-    completionSound.play().catch(() => {});
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    // Direct file opening cannot fetch audio, so prime the original audio element.
+    if (!AudioContext || location.protocol === "file:") {
+      completionSound.muted = true;
+      completionSound
+        .play()
+        .then(() => {
+          completionSound.pause();
+          completionSound.currentTime = 0;
+          completionSound.muted = false;
+        })
+        .catch(() => {
+          completionSound.muted = false;
+        });
+      return;
+    }
+    try {
+      // Mobile browsers require the context to be resumed inside a user gesture.
+      if (!audioContext) audioContext = new AudioContext();
+      audioContext.resume().catch(() => {});
+      if (!soundLoading) {
+        soundLoading = fetch(new URL("./sound.mp3", document.baseURI))
+          .then((response) => {
+            if (!response.ok)
+              throw new Error("Completion audio could not load");
+            return response.arrayBuffer();
+          })
+          .then((bytes) => audioContext.decodeAudioData(bytes))
+          .then((buffer) => {
+            completionBuffer = buffer;
+          })
+          .catch(() => {
+            soundLoading = null;
+          });
+      }
+    } catch {
+      audioContext = null;
+    }
+  }
+
+  async function playCompletionSound() {
+    if (!preferences.sound) return;
+    try {
+      if (audioContext) {
+        await audioContext.resume();
+        if (soundLoading) await soundLoading;
+        if (!preferences.sound) return;
+        if (completionBuffer && audioContext.state === "running") {
+          const source = audioContext.createBufferSource();
+          source.buffer = completionBuffer;
+          source.connect(audioContext.destination);
+          source.start();
+          return;
+        }
+      }
+      completionSound.currentTime = 0;
+      await completionSound.play();
+    } catch {
+      notice("Session complete. Your browser could not play the sound.");
+    }
+  }
+
+  function showCompletionFeedback() {
+    playCompletionSound();
+    korokScene.celebrate();
   }
   function switchMode(nextMode) {
+    completionPending = false;
     korokScene.cancelCelebration();
     timer.selectMode(nextMode);
     render();
@@ -198,10 +266,9 @@
     drawScene();
   }
   function finishSession(finishedMode) {
-    playCompletionSound();
-    if (finishedMode === "focus") {
-      korokScene.celebrate();
-    }
+    // A hidden page may not render frames or play audio. Replay once on return.
+    completionPending = document.hidden && !pipWindow;
+    if (!completionPending) showCompletionFeedback();
     const message =
       finishedMode === "focus"
         ? "Focus complete. Time for a break."
@@ -222,6 +289,10 @@
   }
 
   function toggleTimer() {
+    if (!timer.getState().running) {
+      completionPending = false;
+      prepareCompletionSound();
+    }
     const finishedMode = timer.toggle();
     if (finishedMode) {
       finishSession(finishedMode);
@@ -243,6 +314,7 @@
   }
 
   function skipSession() {
+    completionPending = false;
     timer.skip();
     korokScene.cancelCelebration();
     render();
@@ -281,6 +353,7 @@
   }
   find("#sound").addEventListener("click", () => {
     preferences.sound = !preferences.sound;
+    if (preferences.sound) prepareCompletionSound();
     save();
     soundUI();
   });
@@ -386,6 +459,10 @@
   window.addEventListener("pagehide", () => pipWindow?.close());
   document.addEventListener("visibilitychange", () => {
     tick();
+    if (!document.hidden && completionPending) {
+      completionPending = false;
+      showCompletionFeedback();
+    }
     drawScene();
   });
   // Check four times per second; tick() calculates the actual time remaining.

@@ -47,7 +47,7 @@ window.createKorok = function createKorok({
       previousMode = mode;
       const now = Date.now();
       const motionEnabled = preferences.motion && !reducedMotion.matches;
-      const dancing = motionEnabled && now < danceUntil && mode !== "focus";
+      const dancing = motionEnabled && now < danceUntil;
       // Pose values blend between standing (0), sitting (1), and sleeping (2).
       let targetPose = 0;
       if (!dancing && mode === "short") targetPose = 1;
