@@ -1,0 +1,14 @@
+{
+  "name": "forest-timer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A static forest-spirit Pomodoro timer with a customizable Three.js character.",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test",
+    "check": "node --check app.js && node --check timer.js && node --check korok.js && node --check mask-shapes.js && node --check textures.js && node --check build.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

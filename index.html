@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10291f" />
+    <title>Forest Timer</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"
+      integrity="sha384-qOkzR5Ke/XkQxuGVJ9hpFEpDlcoLtWwVYhnJf06cLIZa2vaIptSqaubivErzmD5O"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"
+      integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu"
+      crossorigin="anonymous"
+    ></script>
+    <script defer src="timer.js"></script>
+    <script defer src="mask-shapes.js"></script>
+    <script defer src="textures.js"></script>
+    <script defer src="korok.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <main id="timer-app">
+      <header class="topbar">
+        <h1 class="wordmark">FOREST TIMER</h1>
+        <div class="tools">
+          <button
+            id="sound"
+            class="icon-button"
+            title="Completion sound"
+            aria-label="Completion sound"
+            aria-pressed="true"
+          >
+            <i data-lucide="volume-2"></i>
+          </button>
+          <button
+            id="float"
+            class="icon-button"
+            title="Open floating timer"
+            aria-label="Open floating timer"
+          >
+            <i data-lucide="picture-in-picture-2"></i>
+          </button>
+          <button
+            id="settings-toggle"
+            class="icon-button"
+            title="Timer settings"
+            aria-label="Timer settings"
+            aria-expanded="false"
+            aria-controls="settings"
+            aria-haspopup="dialog"
+          >
+            <i data-lucide="sliders-horizontal"></i>
+          </button>
+        </div>
+      </header>
+
+      <section class="timer" aria-label="Pomodoro timer">
+        <div class="mode-switch" role="group" aria-label="Session type">
+          <button data-mode="focus" aria-pressed="true">Focus</button>
+          <button data-mode="short" aria-pressed="false">Short break</button>
+          <button data-mode="long" aria-pressed="false">Long break</button>
+        </div>
+        <div class="clock-block">
+          <div class="eyebrow" id="session-label">TIME TO FOCUS</div>
+          <div
+            id="time"
+            role="timer"
+            aria-live="off"
+            aria-label="25 minutes remaining"
+          >
+            25:00
+          </div>
+          <div
+            class="progress-track"
+            role="progressbar"
+            aria-label="Session progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div id="progress"></div>
+          </div>
+        </div>
+        <div class="controls">
+          <button
+            id="reset"
+            class="icon-button secondary-control"
+            title="Reset session"
+            aria-label="Reset session"
+          >
+            <i data-lucide="rotate-ccw"></i>
+          </button>
+          <button id="start" class="start-button">
+            <i data-lucide="play"></i><span>Start focus</span>
+          </button>
+          <button
+            id="skip"
+            class="icon-button secondary-control"
+            title="Skip to next session"
+            aria-label="Skip to next session"
+          >
+            <i data-lucide="skip-forward"></i>
+          </button>
+        </div>
+        <div class="scene-wrap">
+          <div
+            id="scene"
+            role="group"
+            aria-label="Forest spirit rotation"
+            aria-describedby="scene-description"
+            tabindex="0"
+          ></div>
+          <span id="scene-description" class="sr-only"
+            >Use the left and right arrow keys to rotate the forest
+            spirit.</span
+          >
+          <div id="scene-fallback" hidden role="img" aria-label="Forest spirit">
+            <span class="korok-sprout"></span
+            ><span class="korok-body"><b class="bark-grain"></b></span
+            ><span class="korok-mask"
+              ><span class="leaf-vein"></span><span class="leaf-shine"></span
+              ><i></i
+            ></span>
+          </div>
+          <div id="korok-asleep" class="korok-asleep" hidden aria-hidden="true">
+            <span class="animated-z">Z z z</span>
+          </div>
+        </div>
+        <footer class="session-footer">
+          <div
+            class="session-dots"
+            role="img"
+            aria-label="0 of 4 focus sessions complete"
+          >
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <span id="session-count">SESSION 01 / 04</span>
+        </footer>
+      </section>
+
+      <dialog id="settings" hidden aria-labelledby="settings-title">
+        <div class="settings-heading">
+          <h2 id="settings-title">Settings</h2>
+          <button
+            id="settings-close"
+            class="icon-button"
+            title="Close settings"
+            aria-label="Close settings"
+          >
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <form id="settings-form">
+          <label for="mask-choice"
+            >Mask
+            <select id="mask-choice" name="mask">
+              <option value="leaf">Leaf</option>
+              <option value="clover">Clover</option>
+              <option value="maple">Maple</option>
+              <option value="autumn">Autumn</option>
+              <option value="ginkgo">Ginkgo</option>
+            </select>
+          </label>
+          <label
+            >Focus
+            <span
+              ><input
+                name="focus"
+                type="number"
+                min="1"
+                max="180"
+                required
+                value="25"
+              />
+              min</span
+            ></label
+          >
+          <label
+            >Short break
+            <span
+              ><input
+                name="short"
+                type="number"
+                min="1"
+                max="60"
+                required
+                value="5"
+              />
+              min</span
+            ></label
+          >
+          <label
+            >Long break
+            <span
+              ><input
+                name="long"
+                type="number"
+                min="1"
+                max="120"
+                required
+                value="15"
+              />
+              min</span
+            ></label
+          >
+          <label
+            ><span>Motion</span><input id="motion" type="checkbox" checked
+          /></label>
+          <button class="save-button" type="submit">Save durations</button>
+        </form>
+      </dialog>
+      <p id="notice" role="status" aria-atomic="true"></p>
+      <div id="announcement" class="sr-only" aria-live="polite"></div>
+    </main>
+  </body>
+</html>
