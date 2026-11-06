@@ -7,7 +7,12 @@ const test = require("node:test");
 const vm = require("node:vm");
 
 // Replace browser elements and audio with small test doubles, while running the real app.
-function makeApp({ sound = true, protocol = "https:" } = {}) {
+function makeApp({
+  sound = true,
+  protocol = "https:",
+  motion = true,
+  reducedMotion = false,
+} = {}) {
   let now = 0;
   let gesture = false;
   let interval;
@@ -123,9 +128,11 @@ function makeApp({ sound = true, protocol = "https:" } = {}) {
     Audio,
     URL,
     location: { protocol },
+    matchMedia: () => ({ matches: reducedMotion }),
     Date: { now: () => now },
     localStorage: {
-      getItem: () => JSON.stringify({ focus: 1, short: 1, long: 1, sound }),
+      getItem: () =>
+        JSON.stringify({ focus: 1, short: 1, long: 1, sound, motion }),
       setItem() {},
     },
     fetch(url) {
@@ -173,6 +180,25 @@ function makeApp({ sound = true, protocol = "https:" } = {}) {
 }
 
 const flushAudio = () => new Promise((resolve) => setImmediate(resolve));
+
+test("Start explains device reduced motion without disabling completion audio", async () => {
+  const app = makeApp({ reducedMotion: true });
+  app.start();
+  assert.match(
+    app.element("#notice").textContent,
+    /device requests reduced motion/,
+  );
+  await flushAudio();
+  app.complete();
+  await flushAudio();
+  assert.equal(app.feedback().plays, 1);
+});
+
+test("Start explains disabled motion in timer settings", () => {
+  const app = makeApp({ motion: false });
+  app.start();
+  assert.match(app.element("#notice").textContent, /off in timer settings/);
+});
 
 for (const mode of ["focus", "short", "long"]) {
   test(`${mode} prepares audio during Start and celebrates on completion`, async () => {

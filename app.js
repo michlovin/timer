@@ -297,7 +297,15 @@
     if (finishedMode) {
       finishSession(finishedMode);
     } else if (timer.getState().running) {
-      notice("");
+      if (!preferences.motion) {
+        notice("Automatic animation is off in timer settings.");
+      } else if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        notice(
+          "Automatic animation is off because your device requests reduced motion.",
+        );
+      } else {
+        notice("");
+      }
     }
     render();
     setPlayIcon();

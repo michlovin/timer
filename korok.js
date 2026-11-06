@@ -18,6 +18,8 @@ window.createKorok = function createKorok({
   let restPose = 0;
   let rotation = 0;
   let pointer = 0;
+  let dragPointerId = null;
+  let dragX = 0;
   let previousMode = getTimerState().mode;
   let danceStartedAt = 0;
   let danceUntil = 0;
@@ -493,16 +495,49 @@ window.createKorok = function createKorok({
       });
     }
 
+    sceneElement.addEventListener("pointerdown", (event) => {
+      if (
+        event.pointerType !== "touch" ||
+        event.isPrimary === false ||
+        dragPointerId !== null ||
+        getTimerState().mode !== "focus"
+      )
+        return;
+      dragPointerId = event.pointerId;
+      dragX = event.clientX;
+      pointer = 0;
+      sceneElement.setPointerCapture(event.pointerId);
+    });
     sceneElement.addEventListener("pointermove", (event) => {
+      if (event.pointerId === dragPointerId) {
+        // Explicit touch dragging works even when automatic motion is disabled.
+        if (getTimerState().mode !== "focus") return;
+        rotation += (event.clientX - dragX) * 0.008;
+        dragX = event.clientX;
+        draw();
+        return;
+      }
+      if (event.pointerType === "touch") return;
       if (!preferences.motion || reducedMotion.matches) return;
       const bounds = sceneElement.getBoundingClientRect();
       pointer = (event.clientX - bounds.left - bounds.width / 2) * 0.004;
       draw();
     });
     sceneElement.addEventListener("pointerleave", () => {
+      if (dragPointerId !== null) return;
       pointer = 0;
       draw();
     });
+    function endDrag(event) {
+      if (event.pointerId !== dragPointerId) return;
+      dragPointerId = null;
+      if (sceneElement.hasPointerCapture(event.pointerId)) {
+        sceneElement.releasePointerCapture(event.pointerId);
+      }
+    }
+    sceneElement.addEventListener("pointerup", endDrag);
+    sceneElement.addEventListener("pointercancel", endDrag);
+    sceneElement.addEventListener("lostpointercapture", endDrag);
     sceneElement.addEventListener("keydown", (event) => {
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault();
